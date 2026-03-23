@@ -1,292 +1,241 @@
-# ARIA — AI Voice Scheduling Assistant
+# ARIA — AI Voice Scheduling Agent by Vikara
 
-> A production-grade, full-stack voice agent that books real Google Calendar events through natural conversation.
-
-**Live Demo:** https://your-vercel-url.vercel.app
-**Demo Video:** https://loom.com/your-link
-**Backend API:** http://your-ec2-ip:4000/api
+> A production-ready voice agent that books real Google Calendar events through natural conversation. Built as part of Vikara's AI engineering initiative.
 
 ---
 
-## Architecture
+## 🔗 Live Demo
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                         CLIENT BROWSER                          │
-│                                                                 │
-│  Web Speech API (STT) ──► Voice Agent UI ──► Web Speech (TTS)  │
-│                                  │                              │
-└──────────────────────────────────┼──────────────────────────────┘
-                                   │ HTTPS
-                    ┌──────────────┼───────────────┐
-                    │         VERCEL CDN            │
-                    │      Next.js Frontend         │
-                    │                               │
-                    │  /api/chat  ──► Groq LLM      │
-                    │  /api/tts   ──► ElevenLabs     │
-                    │  /api/calendar/* ──► Google   │
-                    └──────────────┬────────────────┘
-                                   │ HTTP
-                    ┌──────────────▼────────────────┐
-                    │         AWS EC2               │
-                    │      Express.js Backend       │
-                    │                               │
-                    │  POST /api/meetings/schedule  │
-                    │  POST /api/meetings/reschedule│
-                    │  POST /api/meetings/cancel    │
-                    │  GET  /api/meetings           │
-                    │  GET  /api/meetings/availability│
-                    │  GET  /api/health             │
-                    └──────────────┬────────────────┘
-                                   │ mysql2
-                    ┌──────────────▼────────────────┐
-                    │         AWS RDS               │
-                    │         MySQL 8.0             │
-                    │                               │
-                    │  users                        │
-                    │  meetings                     │
-                    │  user_preferences             │
-                    │  api_logs                     │
-                    └───────────────────────────────┘
-```
+**Deployed URL:** https://voice-scheduling-agent-nf3n2k6oa-kishita-pakhranis-projects.vercel.app/
+
+> ⚠️ Use **Chrome or Edge** — voice recognition requires a Chromium-based browser.
 
 ---
 
-## Tech Stack
+## 🎥 Demo Video
 
-| Layer | Technology | Purpose |
-|-------|-----------|---------|
-| Frontend | Next.js 14 | Server-side rendering, API routes |
-| Voice STT | Web Speech API | Browser-native speech recognition |
-| Voice TTS | ElevenLabs → Web Speech fallback | Natural voice output |
-| LLM | Groq (Llama 3.3 70B) | Conversation + entity extraction |
-| Backend | Express.js | REST API server |
-| Database | MySQL 8.0 (AWS RDS) | Persistent meeting storage |
-| Calendar | Google Calendar API v3 | Real event creation |
-| Deployment | Vercel + AWS EC2 + AWS RDS | Production cloud hosting |
-| Process Mgmt | PM2 | Backend auto-restart |
-| Logging | Winston | Structured logging to files |
+[Watch the full demo on YouTube](https://youtu.be/UHBW0zQfOGA)
+
+_The video shows a complete flow: connecting Google Calendar, speaking with ARIA, and the event appearing live in Google Calendar._
 
 ---
 
-## Key Features
-
-### Voice Intelligence
-- Real-time speech recognition via Web Speech API
-- State machine conversation flow — never loses context
-- LLM-powered entity extraction (name, date, time, title)
-- Natural language date parsing ("next Tuesday", "day after tomorrow")
-- Robust confirmation with broad yes/no detection
-
-### Backend REST API
-- `POST /api/meetings/schedule` — schedule with conflict detection
-- `POST /api/meetings/reschedule` — update with alternative suggestions
-- `POST /api/meetings/cancel` — cancel locally + Google Calendar
-- `GET /api/meetings` — list with filters (date range, status)
-- `GET /api/meetings/availability` — free/busy slots for a day
-- `GET /api/health` — uptime + DB connectivity check
-
-### Scheduling Intelligence
-- **Conflict detection** — checks overlapping meetings before booking
-- **Alternative suggestions** — auto-suggests 3 nearby free slots on conflict
-- **Timezone handling** — America/New_York with DST support
-- **Availability API** — returns free 30-min+ slots in a workday
-
-### Database Design
-- Normalized MySQL schema (users, meetings, preferences, logs)
-- Connection pooling (10 connections)
-- Automatic retry on transient failures (3 retries with backoff)
-- All requests logged to `api_logs` table
-
-### Production Reliability
-- Rate limiting (100 req/15 min per IP)
-- Helmet security headers
-- CORS restricted to frontend domain
-- Input validation on all endpoints (express-validator)
-- Global error handler with structured responses
-- Winston logging to rotating files + console
-- PM2 process management with auto-restart
-
----
-
-## Project Structure
-
-```
-voice-scheduler/
-├── frontend/                    # Next.js App (Vercel)
-│   ├── pages/
-│   │   ├── index.js             # Voice agent UI
-│   │   ├── meetings.js          # Meeting dashboard (edit/cancel)
-│   │   └── api/
-│   │       ├── chat.js          # Groq conversation + backend sync
-│   │       ├── tts.js           # ElevenLabs TTS proxy
-│   │       └── calendar/        # Google OAuth + event creation
-│   └── lib/
-│       └── googleCalendar.js
-│
-├── backend/                     # Express.js API (AWS EC2)
-│   └── src/
-│       ├── server.js            # App entry point
-│       ├── routes/
-│       │   ├── meetings.js      # Schedule/reschedule/cancel/list
-│       │   ├── users.js         # User management
-│       │   └── health.js        # Health check
-│       ├── services/
-│       │   ├── schedulingService.js    # Conflict detection, availability
-│       │   └── googleCalendarService.js
-│       ├── middleware/
-│       │   ├── requestLogger.js
-│       │   └── errorHandler.js
-│       ├── db/
-│       │   ├── connection.js    # MySQL pool + query helper
-│       │   └── migrate.js       # Schema migrations
-│       └── utils/
-│           └── logger.js        # Winston logger
-│
-├── database/
-│   └── schema.sql               # Full MySQL schema
-│
-└── docs/
-    └── AWS_DEPLOYMENT.md        # Step-by-step cloud deployment
-```
-
----
-
-## API Reference
-
-### Schedule a Meeting
-```http
-POST /api/meetings/schedule
-Content-Type: application/json
-
-{
-  "userId": "uuid",
-  "title": "Team Standup",
-  "startTime": "2026-03-25T14:00:00",
-  "endTime": "2026-03-25T15:00:00",
-  "timezone": "America/New_York",
-  "accessToken": "google_oauth_token"
-}
-```
-
-**Response (201):**
-```json
-{
-  "success": true,
-  "data": {
-    "id": "uuid",
-    "title": "Team Standup",
-    "start_time": "2026-03-25T14:00:00",
-    "status": "scheduled",
-    "google_event_link": "https://calendar.google.com/..."
-  }
-}
-```
-
-**Conflict Response (409):**
-```json
-{
-  "success": false,
-  "error": "Time slot conflicts with existing meeting",
-  "conflicts": [...],
-  "suggestions": [
-    { "start": "...", "end": "...", "label": "1h later" },
-    { "start": "...", "end": "...", "label": "2h later" }
-  ]
-}
-```
-
----
-
-### Check Availability
-```http
-GET /api/meetings/availability?userId=uuid&date=2026-03-25
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "date": "2026-03-25",
-    "bookedMeetings": [...],
-    "freeSlots": [
-      { "start": "2026-03-25T08:00:00", "end": "2026-03-25T10:00:00", "durationMinutes": 120 }
-    ]
-  }
-}
-```
-
----
-
-## Running Locally
+## 🧪 How to Test the Agent
 
 ### Prerequisites
+
+- Chrome or Edge browser
+- A Google account
+
+### Steps
+
+1. **Open the deployed URL** in Chrome or Edge
+
+2. **Connect Google Calendar**
+   - Click **"Connect Calendar"** in the top navigation
+   - Sign in with your Google account
+   - Click **Allow** when prompted
+   - You will be redirected back and see **"Calendar connected"** in green
+
+3. **Start a voice session**
+   - Click the **"Start Session"** button
+   - Allow microphone access when the browser asks
+
+4. **Speak naturally with ARIA**
+   - ARIA will ask for your **name** — say it clearly
+   - ARIA will ask for a **date** — say something like _"next Monday"_ or _"April 10th"_ (weekdays only)
+   - ARIA will ask for a **time** — say something like _"2 PM"_ or _"10 AM"_ (business hours 9 AM–5 PM only)
+   - ARIA will ask for a **meeting title** — say something like _"Team Standup"_ or _"Client Call"_
+   - ARIA will **read back the details** — say _"yes"_ or _"sounds good"_ to confirm
+
+5. **Event is created**
+   - A success banner appears with a link to the event
+   - Open Google Calendar to verify the event was created at the correct time
+
+6. **Manage meetings**
+   - Click **"My Meetings"** in the navigation to view, reschedule, or cancel events
+
+### Validation Rules
+
+- Meetings can only be scheduled on **weekdays (Mon–Fri)**
+- Meetings can only be scheduled during **business hours (9 AM – 5 PM Eastern)**
+- ARIA will ask again if you provide an invalid date or time
+
+---
+
+## 📅 Calendar Integration
+
+### Provider
+
+Google Calendar API v3
+
+### Authentication Flow
+
+1. User clicks "Connect Calendar" which redirects to `/api/calendar/auth`
+2. The app initiates Google OAuth 2.0 with `calendar.events` scope
+3. Google redirects back to `/api/calendar/callback` with an authorization code
+4. The code is exchanged for an access token
+5. The access token is stored in the browser's `localStorage`
+6. All subsequent calendar operations use this token
+
+### Event Creation
+
+- **Endpoint:** `POST /api/calendar/create`
+- **Timezone:** `America/New_York` — times are interpreted as Eastern Time
+- **Duration:** 1 hour (fixed)
+- **Reminders:** Email 24 hours before, popup 30 minutes before
+- The event is created on the user's **primary calendar**
+
+### Reschedule & Cancel
+
+- **Reschedule:** `PATCH` call to Google Calendar Events API updates the existing event's start and end time
+- **Cancel:** `DELETE` call removes the event from Google Calendar entirely
+- Both operations validate business hours before executing
+
+### Data Storage
+
+Meeting metadata (title, date, time, Google event ID, event link) is stored in `localStorage` under `ariaMeetings` to power the My Meetings dashboard.
+
+---
+
+## 🛠 Tech Stack
+
+| Layer              | Technology                                    |
+| ------------------ | --------------------------------------------- |
+| Framework          | Next.js 14 (Pages Router)                     |
+| LLM / Conversation | Groq (Llama 3.3 70B)                          |
+| Speech-to-Text     | Web Speech API (browser-native)               |
+| Text-to-Speech     | ElevenLabs → fallback to Web Speech Synthesis |
+| Calendar           | Google Calendar API v3 (OAuth 2.0)            |
+| Deployment         | Vercel                                        |
+
+---
+
+## 🏗 Architecture
+
+```
+User speaks
+    │
+    ▼
+Web Speech API (STT)
+    │
+    ▼
+State Machine (chat.js)
+    │  Extracts: name, date, time, title
+    │  Validates: weekdays only, 9AM–5PM only
+    │
+    ▼
+Groq LLM (Llama 3.3 70B)
+    │  Entity extraction per step
+    │
+    ▼
+Google Calendar API
+    │  Creates event in Eastern timezone
+    │
+    ▼
+Web Speech Synthesis (TTS)
+    │
+    ▼
+User hears confirmation
+```
+
+---
+
+## 💻 Run Locally
+
+### Prerequisites
+
 - Node.js 18+
-- MySQL 8.0 (or use Docker: `docker run -p 3306:3306 -e MYSQL_ROOT_PASSWORD=pass -e MYSQL_DATABASE=aria_scheduler mysql:8`)
-- Chrome/Edge browser
+- Chrome or Edge browser
+- A Google Cloud project with Calendar API enabled
 
-### Frontend
+### 1. Clone the repo
+
 ```bash
-cd frontend
-npm install
-cp .env.example .env.local   # fill in keys
-npm run dev
-# → http://localhost:3000
+git clone https://github.com/kishita1810/Voice-Scheduling-Agent.git
+cd Voice-Scheduling-Agent/frontend
 ```
 
-### Backend
+### 2. Install dependencies
+
 ```bash
-cd backend
 npm install
-cp .env.example .env         # fill in keys
-npm run migrate              # create tables
-npm run dev
-# → http://localhost:4000
 ```
 
-### Environment Variables
+### 3. Set up environment variables
 
-**Frontend (`.env.local`):**
+```bash
+cp .env.example .env.local
+```
+
+Edit `.env.local` with your keys:
+
 ```
 GROQ_API_KEY=gsk_...
-GOOGLE_CLIENT_ID=...
-GOOGLE_CLIENT_SECRET=...
+GOOGLE_CLIENT_ID=your_client_id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=GOCSPX-...
 NEXTAUTH_URL=http://localhost:3000
-BACKEND_URL=http://localhost:4000/api
-NEXT_PUBLIC_API_URL=http://localhost:4000/api
 ```
 
-**Backend (`.env`):**
+### 4. Get your API keys
+
+| Key                    | Where to get it                                                  |
+| ---------------------- | ---------------------------------------------------------------- |
+| `GROQ_API_KEY`         | https://console.groq.com → API Keys (free)                       |
+| `GOOGLE_CLIENT_ID`     | https://console.cloud.google.com → APIs & Services → Credentials |
+| `GOOGLE_CLIENT_SECRET` | Same as above                                                    |
+
+### 5. Configure Google OAuth
+
+In Google Cloud Console:
+
+- Enable **Google Calendar API**
+- Create OAuth 2.0 credentials (Web application)
+- Add authorized redirect URI: `http://localhost:3000/api/calendar/callback`
+- Add your email as a test user in OAuth consent screen
+
+### 6. Start the dev server
+
+```bash
+npm run dev
 ```
-PORT=4000
-DB_HOST=localhost
-DB_NAME=aria_scheduler
-DB_USER=root
-DB_PASSWORD=your_password
-GOOGLE_CLIENT_ID=...
-GOOGLE_CLIENT_SECRET=...
-FRONTEND_URL=http://localhost:3000
-```
+
+Open **http://localhost:3000** in Chrome.
 
 ---
 
-## Cloud Deployment
+## 📸 Screenshots
 
-See [docs/AWS_DEPLOYMENT.md](docs/AWS_DEPLOYMENT.md) for full instructions.
+### ARIA Voice Agent — Idle State
 
-**Summary:**
-- Frontend → Vercel (one-click deploy from GitHub)
-- Backend → AWS EC2 t2.micro with PM2
-- Database → AWS RDS MySQL (free tier)
-- Cost → ~$0/month on AWS free tier
+![ARIA Idle](screenshots/01-idle.png)
+
+### ARIA Listening
+
+![ARIA Listening](screenshots/02-listening.png)
+
+### Booking Confirmed
+
+![Booking Confirmed](screenshots/03-confirmed.png)
+
+### Event Created Successfully
+
+![Event Created](screenshots/04-success.png)
 
 ---
 
-## Screenshots
+## 🚀 Deployment
 
-![ARIA Voice Agent](screenshots/01-listening.png)
-![Booking Confirmed](screenshots/02-confirmed.png)
-![Calendar Event Created](screenshots/03-success.png)
-![Meetings Dashboard](screenshots/04-dashboard.png)
-![Google Calendar](screenshots/05-calendar.png)
+**Frontend:** Deployed on [Vercel](https://vercel.com)
+
+- Root directory set to `frontend/`
+- Environment variables configured in Vercel dashboard
+
+---
+
+## 👤 Built By: Kishita Pakhrani
+
+Built as part of the AI Engineer assignment for **Vikara**.
+
+- GitHub: [@kishita1810](https://github.com/kishita1810)
+- Company: [Vikara](https://vikara.ai)
