@@ -1,6 +1,6 @@
 # ARIA — AI Voice Scheduling Agent by Vikara
 
-> A production-ready voice agent that books real Google Calendar events through natural conversation. Built as part of Vikara's AI engineering initiative.
+> A production-ready voice agent that books real Google Calendar events through natural conversation.
 
 ---
 
@@ -17,6 +17,22 @@
 [Watch the full demo on YouTube](https://youtu.be/UHBW0zQfOGA)
 
 _The video shows a complete flow: connecting Google Calendar, speaking with ARIA, and the event appearing live in Google Calendar._
+
+---
+
+## 📸 Screenshots
+
+### ARIA Voice Agent — Idle State
+
+![ARIA Idle](screenshots/01-idle.png)
+
+### ARIA Listening
+
+![ARIA Listening](screenshots/02-listening.png)
+
+### Booking Confirmed
+
+![Booking Confirmed](screenshots/03-confirmed.png)
 
 ---
 
@@ -204,26 +220,6 @@ Open **http://localhost:3000** in Chrome.
 
 ---
 
-## 📸 Screenshots
-
-### ARIA Voice Agent — Idle State
-
-![ARIA Idle](screenshots/01-idle.png)
-
-### ARIA Listening
-
-![ARIA Listening](screenshots/02-listening.png)
-
-### Booking Confirmed
-
-![Booking Confirmed](screenshots/03-confirmed.png)
-
-### Event Created Successfully
-
-![Event Created](screenshots/04-success.png)
-
----
-
 ## 🚀 Deployment
 
 **Frontend:** Deployed on [Vercel](https://vercel.com)
@@ -235,7 +231,4 @@ Open **http://localhost:3000** in Chrome.
 
 ## 👤 Built By: Kishita Pakhrani
 
-Built as part of the AI Engineer assignment for **Vikara**.
-
 - GitHub: [@kishita1810](https://github.com/kishita1810)
-- Company: [Vikara](https://vikara.ai)
