@@ -1,4 +1,3 @@
-// lib/googleCalendar.js
 import { google } from 'googleapis';
 
 export function getOAuth2Client() {
@@ -27,7 +26,7 @@ export async function createCalendarEvent(accessToken, eventDetails) {
 
   const event = {
     summary: title || 'Meeting',
-    description: `Scheduled via Voice Scheduler with ${attendeeName}`,
+    description: `Scheduled via Vikara ARIA with ${attendeeName}`,
     start: {
       dateTime: startDateTime,
       timeZone: 'America/New_York',
