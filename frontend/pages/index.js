@@ -197,7 +197,7 @@ export default function Home() {
           end_time: `${bk.date}T${String(parseInt(bk.time.split(':')[0])+1).padStart(2,'0')}:${bk.time.split(':')[1]}:00`,
           status: 'scheduled',
           google_event_link: data.eventLink,
-          google_event_id: data.eventId,
+          google_event_id: data.eventId || data.id || null,
         };
         const existing = JSON.parse(localStorage.getItem('ariaMeetings') || '[]');
         localStorage.setItem('ariaMeetings', JSON.stringify([...existing, newMeeting]));

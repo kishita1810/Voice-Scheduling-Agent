@@ -30,11 +30,11 @@ export async function createCalendarEvent(accessToken, eventDetails) {
     description: `Scheduled via Voice Scheduler with ${attendeeName}`,
     start: {
       dateTime: startDateTime,
-      timeZone: 'UTC',
+      timeZone: 'America/New_York',
     },
     end: {
       dateTime: endDateTime,
-      timeZone: 'UTC',
+      timeZone: 'America/New_York',
     },
     reminders: {
       useDefault: false,
